@@ -80,30 +80,71 @@
             </div>
 
             <div x-show="!list.minimized" class="space-y-2">
-              <template x-for="person in list.people" :key="person.name">
-                <label
-                  class="flex items-center justify-between p-4 bg-gray-50 rounded-lg active:bg-gray-100 cursor-pointer"
-                  :class="{'bg-green-50': person.paid}"
-                >
-                  <div class="flex items-center space-x-4 flex-1 min-w-0">
-                    <input
-                      type="checkbox"
-                      :checked="person.paid"
-                      @change="togglePaid(list.id, person.name)"
-                      class="w-6 h-6 text-blue-500 rounded focus:ring-2 focus:ring-blue-500 flex-shrink-0"
-                    />
-                    <span
-                      class="text-base font-medium break-words"
-                      :class="person.paid ? 'line-through text-gray-400' : 'text-gray-800'"
-                      x-text="person.name"
-                    ></span>
-                  </div>
-                  <span
-                    class="text-sm font-bold ml-3 flex-shrink-0"
-                    :class="person.paid ? 'text-green-600' : 'text-orange-500'"
-                    x-text="person.paid ? 'Paid' : 'Pending'"
-                  ></span>
-                </label>
+              <!-- Grouped display -->
+              <template x-if="list.groups">
+                <div class="space-y-4">
+                  <template x-for="group in list.groups" :key="group.name">
+                    <div class="space-y-2">
+                      <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wide px-2 pt-2" x-text="group.name"></h3>
+                      <template x-for="person in group.people" :key="person.name">
+                        <label
+                          class="flex items-center justify-between p-3 bg-gray-50 rounded-lg active:bg-gray-100 cursor-pointer"
+                          :class="{'bg-green-50': person.paid}"
+                        >
+                          <div class="flex items-center space-x-3 flex-1 min-w-0">
+                            <input
+                              type="checkbox"
+                              :checked="person.paid"
+                              @change="togglePaid(list.id, person.name, group.name)"
+                              class="w-5 h-5 text-blue-500 rounded focus:ring-2 focus:ring-blue-500 flex-shrink-0"
+                            />
+                            <span
+                              class="text-sm font-medium break-words"
+                              :class="person.paid ? 'line-through text-gray-400' : 'text-gray-800'"
+                              x-text="person.name"
+                            ></span>
+                          </div>
+                          <span
+                            class="text-xs font-bold ml-3 flex-shrink-0"
+                            :class="person.paid ? 'text-green-600' : 'text-orange-500'"
+                            x-text="person.paid ? '✓' : '○'"
+                          ></span>
+                        </label>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </template>
+              
+              <!-- Non-grouped display -->
+              <template x-if="!list.groups">
+                <div class="space-y-2">
+                  <template x-for="person in list.people" :key="person.name">
+                    <label
+                      class="flex items-center justify-between p-4 bg-gray-50 rounded-lg active:bg-gray-100 cursor-pointer"
+                      :class="{'bg-green-50': person.paid}"
+                    >
+                      <div class="flex items-center space-x-4 flex-1 min-w-0">
+                        <input
+                          type="checkbox"
+                          :checked="person.paid"
+                          @change="togglePaid(list.id, person.name)"
+                          class="w-6 h-6 text-blue-500 rounded focus:ring-2 focus:ring-blue-500 flex-shrink-0"
+                        />
+                        <span
+                          class="text-base font-medium break-words"
+                          :class="person.paid ? 'line-through text-gray-400' : 'text-gray-800'"
+                          x-text="person.name"
+                        ></span>
+                      </div>
+                      <span
+                        class="text-sm font-bold ml-3 flex-shrink-0"
+                        :class="person.paid ? 'text-green-600' : 'text-orange-500'"
+                        x-text="person.paid ? 'Paid' : 'Pending'"
+                      ></span>
+                    </label>
+                  </template>
+                </div>
               </template>
             </div>
 
@@ -111,15 +152,33 @@
               <div class="flex justify-between text-sm mb-2">
                 <span class="text-gray-600">Progress</span>
                 <span class="font-bold text-gray-800">
-                  <span x-text="list.people.filter(p => p.paid).length"></span>
-                  / <span x-text="list.people.length"></span> paid
+                  <template x-if="list.groups">
+                    <span>
+                      <span x-text="list.groups.flatMap(g => g.people).filter(p => p.paid).length"></span>
+                      / <span x-text="list.groups.flatMap(g => g.people).length"></span> paid
+                    </span>
+                  </template>
+                  <template x-if="!list.groups">
+                    <span>
+                      <span x-text="list.people.filter(p => p.paid).length"></span>
+                      / <span x-text="list.people.length"></span> paid
+                    </span>
+                  </template>
                 </span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  class="bg-green-500 h-3 rounded-full transition-all duration-300"
-                  :style="`width: ${(list.people.filter(p => p.paid).length / list.people.length) * 100}%`"
-                ></div>
+                <template x-if="list.groups">
+                  <div
+                    class="bg-green-500 h-3 rounded-full transition-all duration-300"
+                    :style="`width: ${(list.groups.flatMap(g => g.people).filter(p => p.paid).length / list.groups.flatMap(g => g.people).length) * 100}%`"
+                  ></div>
+                </template>
+                <template x-if="!list.groups">
+                  <div
+                    class="bg-green-500 h-3 rounded-full transition-all duration-300"
+                    :style="`width: ${(list.people.filter(p => p.paid).length / list.people.length) * 100}%`"
+                  ></div>
+                </template>
               </div>
             </div>
           </div>
@@ -168,27 +227,53 @@
             const lines = this.inputText
               .split("\n")
               .filter((line) => line.trim());
-            const people = [];
+            const groups = [];
+            let currentGroup = null;
             let description = "";
 
             lines.forEach((line) => {
-              const match = line.match(/^\s*(\d+)\.\s*(.+)$/);
-              if (match) {
-                // match[2] contains the name, remove any leading special characters and whitespace
-                const name = match[2].replace(/^[\s\u200B-\u200D\uFEFF\u00A0]+/, '').trim();
-                if (name) {
-                  people.push({ name: name, paid: false });
+              const groupMatch = line.match(/^group\s+(\d+|[a-zA-Z]+)/i);
+              const personMatch = line.match(/^\s*(\d+)\.?\s*(.+)$/);
+              
+              if (groupMatch) {
+                // Start a new group
+                if (currentGroup && currentGroup.people.length > 0) {
+                  groups.push(currentGroup);
                 }
-              } else if (!description) {
+                currentGroup = {
+                  name: line.trim(),
+                  people: []
+                };
+              } else if (personMatch) {
+                const name = personMatch[2].replace(/^[\s\u200B-\u200D\uFEFF\u00A0]+/, '').trim();
+                if (name) {
+                  if (currentGroup) {
+                    currentGroup.people.push({ name: name, paid: false });
+                  } else {
+                    // No group defined yet, create default group
+                    if (!currentGroup) {
+                      currentGroup = { name: null, people: [] };
+                    }
+                    currentGroup.people.push({ name: name, paid: false });
+                  }
+                }
+              } else if (!description && !groupMatch) {
                 description = line.trim();
               }
             });
 
-            if (people.length > 0) {
+            // Add the last group
+            if (currentGroup && currentGroup.people.length > 0) {
+              groups.push(currentGroup);
+            }
+
+            if (groups.length > 0) {
+              const hasMultipleGroups = groups.length > 1 || groups[0].name !== null;
               const newList = {
                 id: Date.now(),
                 description: description || "Payment List",
-                people: people,
+                groups: hasMultipleGroups ? groups : null,
+                people: hasMultipleGroups ? null : groups[0].people,
                 createdAt: new Date().toISOString(),
                 minimized: false,
               };
@@ -196,16 +281,28 @@
               this.lists.unshift(newList);
               this.save();
               this.inputText = "";
+              this.showInput = false;
             }
           },
 
-          togglePaid(listId, personName) {
+          togglePaid(listId, personName, groupName = null) {
             const list = this.lists.find((l) => l.id === listId);
             if (list) {
-              const person = list.people.find((p) => p.name === personName);
-              if (person) {
-                person.paid = !person.paid;
-                this.save();
+              if (list.groups) {
+                const group = list.groups.find((g) => g.name === groupName);
+                if (group) {
+                  const person = group.people.find((p) => p.name === personName);
+                  if (person) {
+                    person.paid = !person.paid;
+                    this.save();
+                  }
+                }
+              } else {
+                const person = list.people.find((p) => p.name === personName);
+                if (person) {
+                  person.paid = !person.paid;
+                  this.save();
+                }
               }
             }
           },
