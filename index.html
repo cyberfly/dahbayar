@@ -548,7 +548,10 @@
               });
             } else {
               const unpaid = list.people.filter(p => !p.paid);
-              unpaid.forEach(p => unpaidList += `• ${p.name}\n`);
+              if (unpaid.length > 0) {
+                unpaidList += '\n';
+                unpaid.forEach(p => unpaidList += `• ${p.name}\n`);
+              }
             }
             
             if (unpaidList) {
