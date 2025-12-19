@@ -523,9 +523,7 @@
             }
           },
 
-          async shareQRCode(list) {
-            if (!this.paymentInfo.qrCodeUrl) return;
-            
+          buildPaymentMessage(list) {
             let message = `*Payment Info for: ${list.description}*\n\n`;
             
             if (this.paymentInfo.bankName || this.paymentInfo.bankAccount) {
@@ -538,6 +536,36 @@
               }
               message += `\n\n`;
             }
+            
+            // Get unpaid people
+            let unpaidList = '';
+            if (list.groups) {
+              list.groups.forEach(group => {
+                const unpaid = group.people.filter(p => !p.paid);
+                if (unpaid.length > 0) {
+                  unpaidList += `\n*${group.name}*\n`;
+                  unpaid.forEach(p => unpaidList += `• ${p.name}\n`);
+                }
+              });
+            } else {
+              const unpaid = list.people.filter(p => !p.paid);
+              if (unpaid.length > 0) {
+                unpaidList += '\n';
+                unpaid.forEach(p => unpaidList += `• ${p.name}\n`);
+              }
+            }
+            
+            if (unpaidList) {
+              message += `⏳ *Pending Payment:*${unpaidList}`;
+            }
+            
+            return message;
+          },
+
+          async shareQRCode(list) {
+            if (!this.paymentInfo.qrCodeUrl) return;
+            
+            const message = this.buildPaymentMessage(list);
             
             const isAndroid = /android/i.test(navigator.userAgent);
             
@@ -580,40 +608,7 @@
           },
 
           async sharePaymentInfo(list) {
-            let message = `*Payment Info for: ${list.description}*\n\n`;
-            
-            if (this.paymentInfo.bankName || this.paymentInfo.bankAccount) {
-              message += `💳 Bank Account:\n`;
-              if (this.paymentInfo.bankName) {
-                message += `${this.paymentInfo.bankName}\n`;
-              }
-              if (this.paymentInfo.bankAccount) {
-                message += `${this.paymentInfo.bankAccount}`;
-              }
-              message += `\n\n`;
-            }
-            
-            // Get unpaid people
-            let unpaidList = '';
-            if (list.groups) {
-              list.groups.forEach(group => {
-                const unpaid = group.people.filter(p => !p.paid);
-                if (unpaid.length > 0) {
-                  unpaidList += `\n*${group.name}*\n`;
-                  unpaid.forEach(p => unpaidList += `• ${p.name}\n`);
-                }
-              });
-            } else {
-              const unpaid = list.people.filter(p => !p.paid);
-              if (unpaid.length > 0) {
-                unpaidList += '\n';
-                unpaid.forEach(p => unpaidList += `• ${p.name}\n`);
-              }
-            }
-            
-            if (unpaidList) {
-              message += `⏳ *Pending Payment:*${unpaidList}`;
-            }
+            const message = this.buildPaymentMessage(list);
             
             // Share via WhatsApp (text only, no QR URL)
             const encodedMessage = encodeURIComponent(message);
