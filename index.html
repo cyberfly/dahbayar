@@ -53,9 +53,21 @@
 
           <textarea
             x-model="inputText"
-            placeholder="Badminton 22/10/2025&#10;1. John&#10;2. Doe"
+            placeholder="Badminton 22/10/2025&#10;1. Zaki&#10;2. Fathur"
             class="w-full h-32 p-3 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-50 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
           ></textarea>
+
+          <div class="mt-3">
+            <label class="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Amount Per Person (RM)</label>
+            <input
+              type="number"
+              x-model="amountPerPerson"
+              placeholder="10"
+              step="0.10"
+              min="0"
+              class="w-full p-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+            />
+          </div>
 
           <button
             @click="parseAndAdd"
@@ -141,10 +153,14 @@
                   class="text-lg font-bold text-gray-800 dark:text-white break-words"
                   x-text="list.description"
                 ></h2>
-                <p
-                  class="text-xs text-gray-500 dark:text-gray-400 mt-1"
-                  x-text="formatDate(list.createdAt)"
-                ></p>
+                <div class="flex items-center gap-2 mt-1">
+                  <p
+                    class="text-xs text-gray-500 dark:text-gray-400"
+                    x-text="formatDate(list.createdAt)"
+                  ></p>
+                  <span x-show="list.amount" class="text-xs text-blue-600 dark:text-blue-400 font-semibold"
+                    x-text="'RM ' + (list.amount ? list.amount.toFixed(2) : '')"></span>
+                </div>
               </div>
               <div class="flex gap-1">
                 <button
@@ -261,6 +277,17 @@
                   </template>
                 </span>
               </div>
+              <div x-show="list.amount" class="flex justify-between text-sm mb-2">
+                <span class="text-gray-600 dark:text-gray-400">Amount Collected</span>
+                <span class="font-bold text-green-600 dark:text-green-400">
+                  <template x-if="list.groups">
+                    <span x-text="'RM ' + (list.groups.flatMap(g => g.people).filter(p => p.paid).length * list.amount).toFixed(2) + ' / RM ' + (list.groups.flatMap(g => g.people).length * list.amount).toFixed(2)"></span>
+                  </template>
+                  <template x-if="!list.groups">
+                    <span x-text="'RM ' + (list.people.filter(p => p.paid).length * list.amount).toFixed(2) + ' / RM ' + (list.people.length * list.amount).toFixed(2)"></span>
+                  </template>
+                </span>
+              </div>
               <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                 <template x-if="list.groups">
                   <div
@@ -314,6 +341,7 @@
       function paymentTracker() {
         return {
           inputText: "",
+          amountPerPerson: "",
           lists: [],
           showInput: false,
           darkMode: false,
@@ -440,6 +468,7 @@
               const newList = {
                 id: Date.now(),
                 description: description || "Payment List",
+                amount: this.amountPerPerson ? parseFloat(this.amountPerPerson) : null,
                 groups: hasMultipleGroups ? groups : null,
                 people: hasMultipleGroups ? null : groups[0].people,
                 createdAt: new Date().toISOString(),
@@ -449,6 +478,7 @@
               this.lists.unshift(newList);
               this.save();
               this.inputText = "";
+              this.amountPerPerson = "";
               this.showInput = false;
             }
           },
@@ -535,7 +565,13 @@
           },
 
           buildPaymentMessage(list) {
-            let message = `*Payment Info for: ${list.description}*\n\n`;
+            let message = `*Payment Info for: ${list.description}*\n`;
+            
+            if (list.amount) {
+              message += `💰 Amount: RM ${list.amount.toFixed(2)}\n`;
+            }
+            
+            message += `\n`;
             
             if (this.paymentInfo.bankName || this.paymentInfo.bankAccount || this.paymentInfo.bankAccountName) {
               message += `💳 Bank Account:\n`;
