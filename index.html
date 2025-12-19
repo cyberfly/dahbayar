@@ -297,6 +297,9 @@
       </div>
     </div>
 
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2" style="max-width: 90vw; width: 360px;"></div>
+
     <script>
       function paymentTracker() {
         return {
@@ -309,6 +312,41 @@
             bankName: "",
             bankAccount: "",
             qrCodeUrl: ""
+          },
+          toasts: [],
+
+          showToast(message, type = 'success') {
+            const id = Date.now();
+            const toast = { id, message, type };
+            
+            const container = document.getElementById('toast-container');
+            const toastEl = document.createElement('div');
+            toastEl.id = `toast-${id}`;
+            toastEl.className = `transform transition-all duration-300 translate-x-full`;
+            
+            const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : type === 'info' ? 'bg-blue-500' : 'bg-gray-500';
+            const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : type === 'info' ? 'ℹ' : '!';
+            
+            toastEl.innerHTML = `
+              <div class="${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-start gap-3">
+                <span class="text-lg font-bold flex-shrink-0">${icon}</span>
+                <p class="text-sm flex-1">${message}</p>
+                <button onclick="this.closest('[id^=toast-]').remove()" class="text-white hover:text-gray-200 flex-shrink-0">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+              </div>
+            `;
+            
+            container.appendChild(toastEl);
+            
+            setTimeout(() => {
+              toastEl.classList.remove('translate-x-full');
+            }, 10);
+            
+            setTimeout(() => {
+              toastEl.classList.add('translate-x-full');
+              setTimeout(() => toastEl.remove(), 300);
+            }, 5000);
           },
 
           init() {
@@ -460,7 +498,7 @@
 
           savePaymentInfo() {
             localStorage.setItem('paymentInfo', JSON.stringify(this.paymentInfo));
-            alert('Payment information saved!');
+            this.showToast('Payment information saved!', 'success');
             this.showPaymentSettings = false;
           },
 
@@ -525,7 +563,7 @@
                     // Notify Android users
                     if (isAndroid) {
                       setTimeout(() => {
-                        alert('💡 Payment details copied to clipboard! Paste them in your WhatsApp message.');
+                        this.showToast('💡 Payment details copied to clipboard! Paste them in your WhatsApp message.', 'info');
                       }, 300);
                     }
                     
@@ -534,10 +572,10 @@
                 }
               } catch (error) {
                 console.log('Share failed:', error);
-                alert('Unable to share QR code. Please try again.');
+                this.showToast('Unable to share QR code. Please try again.', 'error');
               }
             } else {
-              alert('Sharing is not supported on this device/browser.');
+              this.showToast('Sharing is not supported on this device/browser.', 'error');
             }
           },
 
