@@ -501,7 +501,8 @@
               message += `\n\n`;
             }
             
-            // Try native share with image
+            const isAndroid = /android/i.test(navigator.userAgent);
+            
             if (navigator.share && navigator.canShare) {
               try {
                 const blob = await this.urlToBlob(this.paymentInfo.qrCodeUrl);
@@ -509,19 +510,31 @@
                 if (blob) {
                   const file = new File([blob], "qr-code.png", { type: blob.type || "image/png" });
                   
-                  // Check if we can share this file
                   if (navigator.canShare({ files: [file] })) {
+                    // Always copy to clipboard for Android
+                    if (isAndroid && navigator.clipboard) {
+                      await navigator.clipboard.writeText(message);
+                    }
+                    
                     await navigator.share({
                       title: 'Payment QR Code',
-                      text: message,
+                      text: isAndroid ? '' : message, // Empty text for Android
                       files: [file]
                     });
-                    return; // Successfully shared
+                    
+                    // Notify Android users
+                    if (isAndroid) {
+                      setTimeout(() => {
+                        alert('💡 Payment details copied to clipboard! Paste them in your WhatsApp message.');
+                      }, 300);
+                    }
+                    
+                    return;
                   }
                 }
               } catch (error) {
-                console.log('Native share failed:', error);
-                alert('Unable to share QR code. Please try again or use the payment info share button.');
+                console.log('Share failed:', error);
+                alert('Unable to share QR code. Please try again.');
               }
             } else {
               alert('Sharing is not supported on this device/browser.');
