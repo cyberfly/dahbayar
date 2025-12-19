@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Group Payment Tracker</title>
+    <title>Dah Bayar - Simple Group Payment Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -72,27 +72,27 @@
           
           <div class="space-y-3">
             <div>
+              <label class="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Bank Name</label>
+              <input
+                type="text"
+                x-model="paymentInfo.bankName"
+                placeholder="e.g., Maybank, CIMB, Public Bank"
+                class="w-full p-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+              />
+            </div>
+            
+            <div>
               <label class="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Bank Account Number</label>
               <input
                 type="text"
                 x-model="paymentInfo.bankAccount"
-                placeholder="e.g., 1234567890 (Maybank)"
+                placeholder="e.g., 1234567890"
                 class="w-full p-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               />
             </div>
             
             <div>
-              <label class="text-xs text-gray-600 dark:text-gray-400 mb-1 block">QR Code Image URL</label>
-              <input
-                type="text"
-                x-model="paymentInfo.qrCodeUrl"
-                placeholder="https://example.com/qr.png or upload below"
-                class="w-full p-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-              />
-            </div>
-            
-            <div>
-              <label class="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Or Upload QR Image</label>
+              <label class="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Upload QR Image</label>
               <input
                 type="file"
                 accept="image/*"
@@ -131,8 +131,16 @@
               </div>
               <div class="flex gap-1">
                 <button
+                  @click="shareQRCode(list)"
+                  x-show="paymentInfo.qrCodeUrl"
+                  class="text-gray-400 dark:text-gray-500 active:text-blue-600 dark:active:text-blue-400 p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                  title="Share QR Code"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V5a3 3 0 00-3-3H7a3 3 0 00-3 3v11a3 3 0 003 3z"></path></svg>
+                </button>
+                <button
                   @click="sharePaymentInfo(list)"
-                  x-show="paymentInfo.bankAccount || paymentInfo.qrCodeUrl"
+                  x-show="paymentInfo.bankAccount || paymentInfo.bankName"
                   class="text-gray-400 dark:text-gray-500 active:text-green-600 dark:active:text-green-400 p-2 rounded-full hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
                   title="Share Payment Info"
                 >
@@ -282,6 +290,11 @@
           <p class="text-sm mt-1">Paste a WhatsApp message above to start</p>
         </div>
       </div>
+
+      <!-- Credit Footer -->
+      <div class="text-center py-8 px-4 text-xs text-gray-500 dark:text-gray-500">
+        <p>Made with <span class="text-red-500">❤</span> by <a href="https://www.facebook.com/cyberfly" target="_blank" rel="noopener noreferrer" class="text-blue-500 dark:text-blue-400 hover:underline">Muhammad Fathur Rahman</a></p>
+      </div>
     </div>
 
     <script>
@@ -293,6 +306,7 @@
           darkMode: false,
           showPaymentSettings: false,
           paymentInfo: {
+            bankName: "",
             bankAccount: "",
             qrCodeUrl: ""
           },
@@ -312,7 +326,7 @@
             }
 
             // Load payment info
-            const savedPaymentInfo = JSON.parse(localStorage.getItem('paymentInfo') || '{"bankAccount":"","qrCodeUrl":""}');
+            const savedPaymentInfo = JSON.parse(localStorage.getItem('paymentInfo') || '{"bankName":"","bankAccount":"","qrCodeUrl":""}');
             this.paymentInfo = savedPaymentInfo;
           },
 
@@ -465,11 +479,61 @@
             }
           },
 
+          async shareQRCode(list) {
+            if (!this.paymentInfo.qrCodeUrl) return;
+            
+            let message = `*Payment Info for: ${list.description}*\n\n`;
+            
+            if (this.paymentInfo.bankName || this.paymentInfo.bankAccount) {
+              message += `💳 Bank Account:\n`;
+              if (this.paymentInfo.bankName) {
+                message += `${this.paymentInfo.bankName}\n`;
+              }
+              if (this.paymentInfo.bankAccount) {
+                message += `${this.paymentInfo.bankAccount}`;
+              }
+              message += `\n\n`;
+            }
+            
+            // Try native share with image
+            if (navigator.share && navigator.canShare) {
+              try {
+                const blob = await this.urlToBlob(this.paymentInfo.qrCodeUrl);
+                
+                if (blob) {
+                  const file = new File([blob], "qr-code.png", { type: blob.type || "image/png" });
+                  
+                  // Check if we can share this file
+                  if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                      title: 'Payment QR Code',
+                      text: message,
+                      files: [file]
+                    });
+                    return; // Successfully shared
+                  }
+                }
+              } catch (error) {
+                console.log('Native share failed:', error);
+                alert('Unable to share QR code. Please try again or use the payment info share button.');
+              }
+            } else {
+              alert('Sharing is not supported on this device/browser.');
+            }
+          },
+
           async sharePaymentInfo(list) {
             let message = `*Payment Info for: ${list.description}*\n\n`;
             
-            if (this.paymentInfo.bankAccount) {
-              message += `💳 Bank Account:\n${this.paymentInfo.bankAccount}\n\n`;
+            if (this.paymentInfo.bankName || this.paymentInfo.bankAccount) {
+              message += `💳 Bank Account:\n`;
+              if (this.paymentInfo.bankName) {
+                message += `${this.paymentInfo.bankName}\n`;
+              }
+              if (this.paymentInfo.bankAccount) {
+                message += `${this.paymentInfo.bankAccount}`;
+              }
+              message += `\n\n`;
             }
             
             // Get unpaid people
@@ -491,34 +555,7 @@
               message += `⏳ *Pending Payment:*${unpaidList}`;
             }
             
-            // Try native share with image if available
-            if (this.paymentInfo.qrCodeUrl && navigator.share && navigator.canShare) {
-              try {
-                const blob = await this.urlToBlob(this.paymentInfo.qrCodeUrl);
-                
-                if (blob) {
-                  const file = new File([blob], "qr-code.png", { type: blob.type || "image/png" });
-                  
-                  // Check if we can share this file
-                  if (navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                      title: 'Payment Info',
-                      text: message,
-                      files: [file]
-                    });
-                    return; // Successfully shared
-                  }
-                }
-              } catch (error) {
-                console.log('Native share failed, falling back to WhatsApp link:', error);
-              }
-            }
-            
-            // Fallback: Open WhatsApp with text message
-            if (this.paymentInfo.qrCodeUrl && !this.paymentInfo.qrCodeUrl.startsWith('data:')) {
-              message += `\n📱 QR Code: ${this.paymentInfo.qrCodeUrl}`;
-            }
-            
+            // Share via WhatsApp (text only, no QR URL)
             const encodedMessage = encodeURIComponent(message);
             const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
             
