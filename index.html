@@ -455,15 +455,21 @@
             }
           },
 
-          sharePaymentInfo(list) {
+          async urlToBlob(url) {
+            try {
+              const response = await fetch(url);
+              return await response.blob();
+            } catch (error) {
+              console.error('Failed to convert URL to blob:', error);
+              return null;
+            }
+          },
+
+          async sharePaymentInfo(list) {
             let message = `*Payment Info for: ${list.description}*\n\n`;
             
             if (this.paymentInfo.bankAccount) {
               message += `💳 Bank Account:\n${this.paymentInfo.bankAccount}\n\n`;
-            }
-            
-            if (this.paymentInfo.qrCodeUrl) {
-              message += `📱 QR Code: ${this.paymentInfo.qrCodeUrl}\n\n`;
             }
             
             // Get unpaid people
@@ -485,7 +491,34 @@
               message += `⏳ *Pending Payment:*${unpaidList}`;
             }
             
-            // Open WhatsApp with pre-filled message
+            // Try native share with image if available
+            if (this.paymentInfo.qrCodeUrl && navigator.share && navigator.canShare) {
+              try {
+                const blob = await this.urlToBlob(this.paymentInfo.qrCodeUrl);
+                
+                if (blob) {
+                  const file = new File([blob], "qr-code.png", { type: blob.type || "image/png" });
+                  
+                  // Check if we can share this file
+                  if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                      title: 'Payment Info',
+                      text: message,
+                      files: [file]
+                    });
+                    return; // Successfully shared
+                  }
+                }
+              } catch (error) {
+                console.log('Native share failed, falling back to WhatsApp link:', error);
+              }
+            }
+            
+            // Fallback: Open WhatsApp with text message
+            if (this.paymentInfo.qrCodeUrl && !this.paymentInfo.qrCodeUrl.startsWith('data:')) {
+              message += `\n📱 QR Code: ${this.paymentInfo.qrCodeUrl}`;
+            }
+            
             const encodedMessage = encodeURIComponent(message);
             const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
             
