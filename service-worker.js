@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dah-bayar-v1';
+const CACHE_NAME = 'dah-bayar-v1.1.0';
 const urlsToCache = [
   './',
   './index.html',
